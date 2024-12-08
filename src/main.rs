@@ -1,40 +1,55 @@
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::{
+    env,
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, BufWriter, Write},
+};
+
 fn main() {
-    let mut number = String::new();
-    println!("Enter a integer (max: {}): ", u32::MAX);
-    std::io::stdin().read_line(&mut number).unwrap();
-    let number: u32 = number.trim().parse().unwrap();
-    let mut numbers = Vec::new();
-    for i in 11..number {
-        if i % 2 != 0 && i % 3 != 0 && i % 5 != 0 && i % 7 != 0 {
-            numbers.push(i);
-        }
-    }
-    let mut removed: usize = 0;
-    'top: for mut index_dividend in 0..numbers.len() {
-        index_dividend -= removed;
-        for index_divisor in 0..numbers.len() {
-            if index_dividend == index_divisor {
-                continue;
-            } else if numbers[index_dividend] < numbers[index_divisor].pow(2) {
-                continue 'top;
-            } else if numbers[index_dividend] % numbers[index_divisor] == 0 {
-                numbers.remove(index_dividend);
-                removed += 1;
-                continue 'top;
+    match env::args().nth(1).unwrap().parse::<u128>() {
+        Ok(n) => {
+            {
+                let file = File::create("primes.dat").unwrap();
+                let mut writer = BufWriter::new(file);
+                writer.write_all(b"2\n").unwrap();
             }
+            calc(3, 2, 0, n);
+            return;
+        }
+        Err(_) => {
+            println!(
+                "Read the README.md file to understand how to use this application and try again."
+            );
+            return;
         }
     }
-    println!("Finished calculating primes up to {}", number);
-    {
-        let length = numbers.len() + 4;
-        let file_path = File::create("primes.csv").unwrap();
-        let mut writer = BufWriter::new(file_path);
-        writeln!(writer, "# Primes up to {}\n2\n3\n5\n7", number).unwrap();
-        for number in numbers {
-            writeln!(writer, "{}", number).unwrap();
-        }
-        writeln!(writer, "# Total: {}", length).unwrap();
+}
+
+fn calc(dividend: u128, divisor: u128, index: usize, limit: u128) {
+    if divisor * divisor > dividend {
+        write(dividend);
+    } else if dividend % divisor != 0 {
+        return calc(dividend, read(index + 1), index + 1, limit);
     }
+    if dividend != u128::MAX && dividend + 2 <= limit {
+        return calc(dividend + 2, 2, 0, limit);
+    } else {
+        return;
+    }
+}
+
+fn read(index: usize) -> u128 {
+    BufReader::new(File::open("primes.dat").unwrap())
+        .lines()
+        .into_iter()
+        .nth(index)
+        .unwrap()
+        .unwrap()
+        .parse()
+        .unwrap()
+}
+
+fn write(prime: u128) {
+    BufWriter::new(OpenOptions::new().append(true).open("primes.dat").unwrap())
+        .write_all(format!("{}\n", prime).as_bytes())
+        .unwrap();
 }
