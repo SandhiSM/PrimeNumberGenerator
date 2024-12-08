@@ -1,40 +1,36 @@
+use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 fn main() {
-    let mut number = String::new();
-    println!("Enter a integer (max: {}): ", u32::MAX);
-    std::io::stdin().read_line(&mut number).unwrap();
-    let number: u32 = number.trim().parse().unwrap();
-    let mut numbers = Vec::new();
-    for i in 11..number {
-        if i % 2 != 0 && i % 3 != 0 && i % 5 != 0 && i % 7 != 0 {
-            numbers.push(i);
+    if env::args().len() != 2 {
+        println!("Read the Readme.md file for more information on how to use the program.");
+        return;
+    }
+    let limit: usize = env::args().nth(1).unwrap().parse().unwrap();
+    let mut primes = Vec::new();
+    for i in (11..=limit).step_by(2) {
+        if i % 3 != 0 && i % 5 != 0 && i % 7 != 0 {
+            primes.push(i);
         }
     }
-    let mut removed: usize = 0;
-    'top: for mut index_dividend in 0..numbers.len() {
-        index_dividend -= removed;
-        for index_divisor in 0..numbers.len() {
-            if index_dividend == index_divisor {
+    let mut writer = BufWriter::new(File::create(format!("primes~{}.csv", limit)).unwrap());
+    writer.write(b"2,\n3,\n5,\n7,\n").unwrap();
+    for index_dividend in 0..primes.len() {
+        for index_divisor in 0..index_dividend {
+            if primes[index_divisor] == 0 {
                 continue;
-            } else if numbers[index_dividend] < numbers[index_divisor].pow(2) {
-                continue 'top;
-            } else if numbers[index_dividend] % numbers[index_divisor] == 0 {
-                numbers.remove(index_dividend);
-                removed += 1;
-                continue 'top;
+            } else if primes[index_dividend] < primes[index_divisor] * primes[index_divisor] {
+                writer
+                    .write(format!("{},\n", primes[index_dividend]).as_bytes())
+                    .unwrap();
+                break;
+            } else if primes[index_dividend] % primes[index_divisor] == 0 {
+                primes[index_dividend] = 0;
+                break;
+            } else {
+                continue;
             }
         }
     }
-    println!("Finished calculating primes up to {}", number);
-    {
-        let length = numbers.len() + 4;
-        let file_path = File::create("primes.csv").unwrap();
-        let mut writer = BufWriter::new(file_path);
-        writeln!(writer, "# Primes up to {}\n2\n3\n5\n7", number).unwrap();
-        for number in numbers {
-            writeln!(writer, "{}", number).unwrap();
-        }
-        writeln!(writer, "# Total: {}", length).unwrap();
-    }
+    return;
 }
